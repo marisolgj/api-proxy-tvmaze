@@ -11,6 +11,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -21,11 +22,15 @@ public class TvMazeService {
 
 	private final RestTemplate restTemplate;
 	private final CachedShowRepository cachedShowRepository;
+	private final CommentService commentService;
 	private static final String TV_MAZE_URL = "https://api.tvmaze.com";
 
-	public TvMazeService(RestTemplate restTemplate, CachedShowRepository cachedShowRepository) {
+	public TvMazeService(RestTemplate restTemplate,
+						 CachedShowRepository cachedShowRepository,
+						 CommentService commentService) {
 		this.restTemplate = restTemplate;
 		this.cachedShowRepository = cachedShowRepository;
+		this.commentService = commentService;
 	}
 
 	public List<ShowSearchResponse> searchShows(String query) {
@@ -47,26 +52,33 @@ public class TvMazeService {
 
 	@SuppressWarnings("unchecked")
 	public Map<String, Object> getShowById(Long showId) {
+		Map<String, Object> showData = null;
+
 		Optional<CachedShow> cachedShow = cachedShowRepository.findById(showId);
 		if (cachedShow.isPresent()) {
-			return cachedShow.get().getData();
-		}
-
-		String url = TV_MAZE_URL + "/shows/" + showId;
-		try {
-			Map<String, Object> apiResponse = restTemplate.getForObject(url, Map.class);
-
-			if (apiResponse != null) {
-				CachedShow newCache = new CachedShow();
-				newCache.setId(showId);
-				newCache.setData(apiResponse);
-				cachedShowRepository.save(newCache);
+			showData = cachedShow.get().getData();
+		} else {
+			String url = TV_MAZE_URL + "/shows/" + showId;
+			try {
+				showData = restTemplate.getForObject(url, Map.class);
+				if (showData != null) {
+					CachedShow newCache = new CachedShow();
+					newCache.setId(showId);
+					newCache.setData(showData);
+					cachedShowRepository.save(newCache);
+				}
+			} catch (HttpClientErrorException e) {
+				return null;
 			}
-
-			return apiResponse;
-		} catch (HttpClientErrorException e) {
-			return null;
 		}
+
+		if (showData != null) {
+			Map<String, Object> responseData = new HashMap<>(showData);
+			responseData.put("comments", commentService.getCommentsForShow(showId));
+			return responseData;
+		}
+
+		return null;
 	}
 
 	private ShowSearchResponse mapToSearchResponse(TvMazeShow show) {
@@ -76,6 +88,7 @@ public class TvMazeService {
 		response.setSummary(show.getSummary());
 		response.setGenres(show.getGenres());
 		response.setChannel(determineChannel(show));
+		response.setComments(commentService.getCommentsForShow(show.getId()));
 		return response;
 	}
 

@@ -1,9 +1,13 @@
 package com.examen.marisol.service;
 
 import com.examen.marisol.dto.CommentRequest;
+import com.examen.marisol.dto.CommentResponse;
 import com.examen.marisol.entity.ShowComment;
 import com.examen.marisol.repository.ShowCommentRepository;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class CommentService {
@@ -26,5 +30,16 @@ public class CommentService {
 
 		commentRepository.save(comment);
 		return true;
+	}
+
+	public List<CommentResponse> getCommentsForShow(Long showId) {
+		return commentRepository.findByShowId(showId).stream()
+				.map(c -> {
+					CommentResponse dto = new CommentResponse();
+					dto.setComment(c.getComment());
+					dto.setRating(c.getRating());
+					return dto;
+				})
+				.collect(Collectors.toList());
 	}
 }
