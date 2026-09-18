@@ -4,11 +4,13 @@ import com.examen.marisol.dto.ShowSearchResponse;
 import com.examen.marisol.dto.external.TvMazeSearchItem;
 import com.examen.marisol.dto.external.TvMazeShow;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,6 +38,17 @@ public class TvMazeService {
 		return Arrays.stream(response)
 				.map(item -> mapToSearchResponse(item.getShow()))
 				.collect(Collectors.toList());
+	}
+
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> getShowById(Long showId) {
+		String url = TV_MAZE_URL + "/shows/" + showId;
+
+		try {
+			return restTemplate.getForObject(url, Map.class);
+		} catch (HttpClientErrorException e) {
+			return null;
+		}
 	}
 
 	private ShowSearchResponse mapToSearchResponse(TvMazeShow show) {
