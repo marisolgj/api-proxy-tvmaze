@@ -1,10 +1,14 @@
 package com.examen.marisol.controller;
 
+import com.examen.marisol.dto.CommentRequest;
 import com.examen.marisol.dto.ShowSearchResponse;
+import com.examen.marisol.service.CommentService;
 import com.examen.marisol.service.TvMazeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,9 +21,11 @@ import java.util.Map;
 public class ShowController {
 
 	private final TvMazeService tvMazeService;
+	private final CommentService commentService;
 
-	public ShowController(TvMazeService tvMazeService) {
+	public ShowController(TvMazeService tvMazeService, CommentService commentService) {
 		this.tvMazeService = tvMazeService;
+		this.commentService = commentService;
 	}
 
 	@GetMapping("/search")
@@ -37,5 +43,16 @@ public class ShowController {
 		}
 
 		return ResponseEntity.ok(show);
+	}
+
+	@PostMapping("/comments")
+	public ResponseEntity<String> addComment(@RequestBody CommentRequest request) {
+		boolean isSaved = commentService.saveComment(request);
+
+		if (isSaved) {
+			return ResponseEntity.ok().body("{\"status\": \"success\", \"message\": \"Comentario guardado\"}");
+		} else {
+			return ResponseEntity.badRequest().body("{\"status\": \"error\", \"message\": \"Rating inválido. Debe ser de 0 a 5.\"}");
+		}
 	}
 }
